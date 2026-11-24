@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Matthew Juárez | 0901-23-4250 | 24/11/2026 | Reporte del catálogo de pacientes -->
+<Report xmlns="http://schemas.microsoft.com/sqlserver/reporting/2008/01/reportdefinition">
+  <Body>
+    <ReportItems>
+      <Textbox Name="Titulo">
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Catálogo de pacientes</Value><Style><FontSize>16pt</FontSize><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Height>0.9cm</Height><Width>16.3cm</Width>
+      </Textbox>
+      <Tablix Name="TablaPacientes">
+        <TablixBody>
+          <TablixColumns><TablixColumn><Width>1cm</Width></TablixColumn>
+<TablixColumn><Width>2.3cm</Width></TablixColumn>
+<TablixColumn><Width>2.3cm</Width></TablixColumn>
+<TablixColumn><Width>2.2cm</Width></TablixColumn>
+<TablixColumn><Width>1.5cm</Width></TablixColumn>
+<TablixColumn><Width>3.3cm</Width></TablixColumn>
+<TablixColumn><Width>2.2cm</Width></TablixColumn>
+<TablixColumn><Width>1.5cm</Width></TablixColumn></TablixColumns>
+          <TablixRows><TablixRow><Height>0.7cm</Height><TablixCells>
+<TablixCell><CellContents><Textbox Name="H0"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>ID</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+<TablixCell><CellContents><Textbox Name="H1"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>Nombre</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+<TablixCell><CellContents><Textbox Name="H2"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>Apellido</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+<TablixCell><CellContents><Textbox Name="H3"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>Nacimiento</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+<TablixCell><CellContents><Textbox Name="H4"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>Sexo</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+<TablixCell><CellContents><Textbox Name="H5"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>Dirección</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+<TablixCell><CellContents><Textbox Name="H6"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>Teléfono</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+<TablixCell><CellContents><Textbox Name="H7"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>Estado</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+</TablixCells></TablixRow><TablixRow><Height>0.7cm</Height><TablixCells>
+<TablixCell><CellContents><Textbox Name="D0"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!pk_idPaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+<TablixCell><CellContents><Textbox Name="D1"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!nombrePaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+<TablixCell><CellContents><Textbox Name="D2"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!apellidoPaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+<TablixCell><CellContents><Textbox Name="D3"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!fechaNacimientoPaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+<TablixCell><CellContents><Textbox Name="D4"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!sexoPaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+<TablixCell><CellContents><Textbox Name="D5"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!direccionPaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+<TablixCell><CellContents><Textbox Name="D6"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!telefonoPaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+<TablixCell><CellContents><Textbox Name="D7"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!estadoPaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
+</TablixCells></TablixRow></TablixRows>
+        </TablixBody>
+        <TablixColumnHierarchy><TablixMembers><TablixMember /><TablixMember /><TablixMember /><TablixMember /><TablixMember /><TablixMember /><TablixMember /><TablixMember /></TablixMembers></TablixColumnHierarchy>
+        <TablixRowHierarchy><TablixMembers><TablixMember><KeepWithGroup>After</KeepWithGroup><RepeatOnNewPage>true</RepeatOnNewPage></TablixMember><TablixMember><Group Name="Detalle" /></TablixMember></TablixMembers></TablixRowHierarchy>
+        <DataSetName>Pacientes</DataSetName><Top>1cm</Top><Height>1.4cm</Height><Width>16.3cm</Width>
+      </Tablix>
+    </ReportItems>
+    <Height>2.4cm</Height>
+  </Body>
+  <Width>16.3cm</Width>
+  <Page><PageHeight>27.94cm</PageHeight><PageWidth>21.59cm</PageWidth><LeftMargin>1.5cm</LeftMargin><RightMargin>1.5cm</RightMargin><TopMargin>1.5cm</TopMargin><BottomMargin>1.5cm</BottomMargin></Page>
+  <DataSources><DataSource Name="DatosLocales"><ConnectionProperties><DataProvider>System.Data.DataSet</DataProvider><ConnectString>/* Local */</ConnectString></ConnectionProperties></DataSource></DataSources>
+  <DataSets><DataSet Name="Pacientes"><Query><DataSourceName>DatosLocales</DataSourceName><CommandText>/* Local */</CommandText></Query><Fields><Field Name="pk_idPaciente"><DataField>pk_idPaciente</DataField></Field>
+<Field Name="nombrePaciente"><DataField>nombrePaciente</DataField></Field>
+<Field Name="apellidoPaciente"><DataField>apellidoPaciente</DataField></Field>
+<Field Name="fechaNacimientoPaciente"><DataField>fechaNacimientoPaciente</DataField></Field>
+<Field Name="sexoPaciente"><DataField>sexoPaciente</DataField></Field>
+<Field Name="direccionPaciente"><DataField>direccionPaciente</DataField></Field>
+<Field Name="telefonoPaciente"><DataField>telefonoPaciente</DataField></Field>
+<Field Name="estadoPaciente"><DataField>estadoPaciente</DataField></Field></Fields></DataSet></DataSets>
+</Report>
