@@ -25324,6 +25324,74 @@ index 9759d425..557ecf48 100644
              // Fin cambio - Gabriel André Guillén Pocón - 0901-23-1998
  
              try
+diff --git a/codigo/componentes/navegador/Navegador/CapaVista_Navegador/Formularios/ClsCrudCoordinador.cs b/codigo/componentes/navegador/Navegador/CapaVista_Navegador/Formularios/ClsCrudCoordinador.cs
+index f97fa440..2e9448db 100644
+--- a/codigo/componentes/navegador/Navegador/CapaVista_Navegador/Formularios/ClsCrudCoordinador.cs
++++ b/codigo/componentes/navegador/Navegador/CapaVista_Navegador/Formularios/ClsCrudCoordinador.cs
+@@ -441,10 +441,20 @@ namespace CapaVista_Navegador
+         // IMPRIMIR
+         public void NavegadorMetImprimir()
+         {
+-            using (FrmVistaReportes FormularioReportes = new FrmVistaReportes(_Vista.NavegadorIdAplicacion,_Vista.NavegadorFuentesDeDatosReporteador))
++            try
++            {
++                var Fuentes = new Dictionary<string, object>(_Vista.NavegadorFuentesDeDatosReporteador);
++                string Dataset = _Vista.NavegadorDatasetCatalogo;
++                if (!string.IsNullOrEmpty(Dataset))
++                    Fuentes[Dataset] = _CtrlTabla.NavegadorFuncLlenarDgv(NombreTabla);
++
++                using (var FormularioReportes = new FrmVistaReportes(_Vista.NavegadorIdAplicacion, Fuentes))
++                    FormularioReportes.ShowDialog(_Vista.FindForm());
++            }
++            catch (Exception Excepcion)
+             {
+-        
+-             FormularioReportes.ShowDialog(_Vista.FindForm());
++                MessageBox.Show(_Vista.FindForm(), Excepcion.Message, "Error al abrir el reporte",
++                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+             }
+         }
+     }
+diff --git a/codigo/componentes/navegador/Navegador/CapaVista_Navegador/Formularios/ClsNavegadorAcciones.cs b/codigo/componentes/navegador/Navegador/CapaVista_Navegador/Formularios/ClsNavegadorAcciones.cs
+index bbf614c5..4c30a472 100644
+--- a/codigo/componentes/navegador/Navegador/CapaVista_Navegador/Formularios/ClsNavegadorAcciones.cs
++++ b/codigo/componentes/navegador/Navegador/CapaVista_Navegador/Formularios/ClsNavegadorAcciones.cs
+@@ -41,7 +41,13 @@ namespace CapaVista_Navegador
+                 case "SIGUIENTE": _Eventos.NavegadorMetSiguiente(); break;
+                 case "FIN": _Eventos.NavegadorMetFin(); break;
+                 case "IMPRIMIR": _Eventos.NavegadorMetImprimir(); break;
+-                case "AYUDA": ClsNavegadorAyuda.NavegadorMetMostrar(_Formulario); break;
++                case "AYUDA":
++                    if (string.IsNullOrEmpty(_Formulario.NavegadorAyudaCatalogo))
++                        ClsNavegadorAyuda.NavegadorMetMostrar(_Formulario);
++                    else
++                        MessageBox.Show(_Formulario.FindForm(), _Formulario.NavegadorAyudaCatalogo,
++                            "Ayuda", MessageBoxButtons.OK, MessageBoxIcon.Information);
++                    break;
+                 case "SALIR": _Eventos.NavegadorMetMinimizar(); break;
+             }
+         }
+diff --git a/codigo/componentes/navegador/Navegador/CapaVista_Navegador/Navegador.cs b/codigo/componentes/navegador/Navegador/CapaVista_Navegador/Navegador.cs
+index b2ed89ee..32a93410 100644
+--- a/codigo/componentes/navegador/Navegador/CapaVista_Navegador/Navegador.cs
++++ b/codigo/componentes/navegador/Navegador/CapaVista_Navegador/Navegador.cs
+@@ -28,6 +28,16 @@ namespace CapaVista_Navegador
+         private int _IdModulo;
+         private int _IdAplicacion;
+         private Dictionary<string, object> _FuentesDeDatosReporteador = new Dictionary<string, object>();
++        // Matthew Juarez | 0901-23-4250 | 24/11/2026 | Ayuda e informe del catalogo.
++        internal string NavegadorAyudaCatalogo { get; private set; }
++        internal string NavegadorDatasetCatalogo { get; private set; }
++
++        public void NavegadorMetConfigurarCatalogo(string Ayuda, string Dataset)
++        {
++            NavegadorAyudaCatalogo = Ayuda;
++            NavegadorDatasetCatalogo = Dataset;
++        }
++
+         private bool _Cargado;
+         private ClsNavegadorAcciones _Acciones;
+         private int _AltoBase;
 diff --git a/codigo/componentes/reporteador/Reporteador/CapaModelo_Reporteador/Repositorios/ClsRepositorio.cs b/codigo/componentes/reporteador/Reporteador/CapaModelo_Reporteador/Repositorios/ClsRepositorio.cs
 index f5f121a9..a0b461cc 100644
 --- a/codigo/componentes/reporteador/Reporteador/CapaModelo_Reporteador/Repositorios/ClsRepositorio.cs
@@ -25337,6 +25405,27 @@ index f5f121a9..a0b461cc 100644
          }
  
          // =========================================================
+diff --git a/codigo/componentes/reporteador/Reporteador/CapaVista_Reporteador/Formas/FrmVistaReportes.cs b/codigo/componentes/reporteador/Reporteador/CapaVista_Reporteador/Formas/FrmVistaReportes.cs
+index e16d2335..bc7b3c74 100644
+--- a/codigo/componentes/reporteador/Reporteador/CapaVista_Reporteador/Formas/FrmVistaReportes.cs
++++ b/codigo/componentes/reporteador/Reporteador/CapaVista_Reporteador/Formas/FrmVistaReportes.cs
+@@ -1,4 +1,4 @@
+-﻿using System;
++using System;
+ using System.Collections.Generic;
+ using System.IO;
+ using System.Windows.Forms;
+@@ -15,7 +15,9 @@ namespace CapaVista_Reporteador.Formas
+         public FrmVistaReportes(string RutaReporte, Dictionary<string, object> FuentesDeDatos)
+         {
+             InitializeComponent();
+-            _RutaReporte = RutaReporte;
++            _RutaReporte = !string.IsNullOrWhiteSpace(RutaReporte) && !Path.IsPathRooted(RutaReporte) && Environment.GetEnvironmentVariable("ASIS_EXAMEN_DSN") != null
++                ? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, RutaReporte)
++                : RutaReporte;
+             _FuentesDeDatos = FuentesDeDatos;
+         }
+ 
 diff --git a/codigo/componentes/seguridad/Seguridad/CapaModelo_Seguridad/Repositorios/ClsConexion.cs b/codigo/componentes/seguridad/Seguridad/CapaModelo_Seguridad/Repositorios/ClsConexion.cs
 index 7e7575d6..02084fee 100644
 --- a/codigo/componentes/seguridad/Seguridad/CapaModelo_Seguridad/Repositorios/ClsConexion.cs
@@ -25351,7 +25440,7 @@ index 7e7575d6..02084fee 100644
  
          protected OdbcConnection SeguridadMetObtenerConexion()
 diff --git a/codigo/componentes/seguridad/Seguridad/CapaVista_Seguridad/FrmLogin.cs b/codigo/componentes/seguridad/Seguridad/CapaVista_Seguridad/FrmLogin.cs
-index 2d666f85..0bdd1c59 100644
+index 2d666f85..7cb59228 100644
 --- a/codigo/componentes/seguridad/Seguridad/CapaVista_Seguridad/FrmLogin.cs
 +++ b/codigo/componentes/seguridad/Seguridad/CapaVista_Seguridad/FrmLogin.cs
 @@ -1,4 +1,4 @@
@@ -25360,13 +25449,14 @@ index 2d666f85..0bdd1c59 100644
   * ==================================================================
   * Área : Seguridad
   * Autor : Victor Omar Gomez Carrascosa
-@@ -42,6 +42,14 @@ namespace CapaVista_Seguridad
+@@ -42,6 +42,15 @@ namespace CapaVista_Seguridad
          {
              InitializeComponent();
          }
 +        // Matthew Juárez | 0901-23-4250 | 24/11/2026 | Destinos del ejecutable del examen.
 +        public FrmLogin(params string[] Destinos) : this()
 +        {
++            SeguridadCmbMDI.DropDownStyle = ComboBoxStyle.DropDownList;
 +            SeguridadCmbMDI.Items.Clear();
 +            SeguridadCmbMDI.Items.AddRange(Destinos);
 +            SeguridadCmbMDI.SelectedIndex = 0;
@@ -25375,7 +25465,7 @@ index 2d666f85..0bdd1c59 100644
          private GraphicsPath SeguridadMetObtenerRectanguloRedondeado(Rectangle Limites, int Radio)
          {
              GraphicsPath RutaGrafica = new GraphicsPath();
-@@ -83,10 +91,31 @@ namespace CapaVista_Seguridad
+@@ -83,10 +92,31 @@ namespace CapaVista_Seguridad
  
                      string destino = SeguridadCmbMDI.Text;
  
@@ -47795,6 +47885,55 @@ index d71fb68d..f44410b4 100644
 -}
 \ No newline at end of file
 +}
+diff --git a/codigo/modulos/ventas/Biblioteca de clase Ventas Y CxC/Mantenimientos/CapaVista_Mantenimientos/FrmMantenimientosVentas.cs b/codigo/modulos/ventas/Biblioteca de clase Ventas Y CxC/Mantenimientos/CapaVista_Mantenimientos/FrmMantenimientosVentas.cs
+index 493e4ab3..9deccdfb 100644
+--- a/codigo/modulos/ventas/Biblioteca de clase Ventas Y CxC/Mantenimientos/CapaVista_Mantenimientos/FrmMantenimientosVentas.cs	
++++ b/codigo/modulos/ventas/Biblioteca de clase Ventas Y CxC/Mantenimientos/CapaVista_Mantenimientos/FrmMantenimientosVentas.cs	
+@@ -5,7 +5,19 @@ namespace CapaVista_Mantenimientos
+ {
+     public partial class FrmMantenimientosVentas : Form
+     {
+-        public FrmMantenimientosVentas()
++        public const int VentasIdModuloPacientes = 7000;
++        public const int VentasIdAplicacionPacientes = 7017;
++
++        public static bool VentasFuncPuedeAbrirPacientes()
++        {
++            return ClsNavegadorPermisos.NavegadorMetInicializarPermisos(
++                VentasIdModuloPacientes, VentasIdAplicacionPacientes, null).TieneAcceso;
++        }
++
++        public FrmMantenimientosVentas() : this(false) { }
++
++        // Matthew Juarez | 0901-23-4250 | 24/11/2026 | Catalogo de pacientes.
++        public FrmMantenimientosVentas(bool Pacientes)
+         {
+             InitializeComponent();
+             var AreaTrabajo = Screen.FromControl(this).WorkingArea;
+@@ -14,7 +26,22 @@ namespace CapaVista_Mantenimientos
+             MinimumSize = System.Drawing.Size.Empty;
+             Size = new System.Drawing.Size(System.Math.Min(Width, System.Math.Max(1, AreaTrabajo.Width - 32)),
+                 System.Math.Min(Height, System.Math.Max(1, AreaTrabajo.Height - 32)));
+-            VentasUsrNavegador.NavegadorMetConfigurar("tblcliente", 4, 4);
++            if (!Pacientes)
++            {
++                VentasUsrNavegador.NavegadorMetConfigurar("tblcliente", 4, 4);
++                return;
++            }
++
++            Text = "7017 – Pacientes";
++            VentasLblTitulo.Text = "Pacientes";
++            VentasLblCodigo.Text = VentasIdAplicacionPacientes.ToString();
++            VentasUsrNavegador.NavegadorMetConfigurar("tbl_paciente",
++                VentasIdModuloPacientes, VentasIdAplicacionPacientes);
++            VentasUsrNavegador.NavegadorMetConfigurarCatalogo(
++                "Pulse Ingresar, complete los datos y pulse Guardar. Para editar o borrar, " +
++                "pulse Modificar o Eliminar y seleccione el registro por su ID. " +
++                "Use Consultar para filtrar e Imprimir para ver el reporte del catálogo. " +
++                "Estado: 1 = activo, 0 = inactivo.", "Pacientes");
+         }
+     }
+ }
 diff --git a/codigo/modulos/ventas/Biblioteca de clase Ventas Y CxC/VentasYCxC/CapaModelo_Ventas/ClsConexion.cs b/codigo/modulos/ventas/Biblioteca de clase Ventas Y CxC/VentasYCxC/CapaModelo_Ventas/ClsConexion.cs
 index 64b3e2e6..4cf76f5f 100644
 --- a/codigo/modulos/ventas/Biblioteca de clase Ventas Y CxC/VentasYCxC/CapaModelo_Ventas/ClsConexion.cs	
@@ -47808,6 +47947,86 @@ index 64b3e2e6..4cf76f5f 100644
                  if (string.IsNullOrWhiteSpace(Cadena)) Cadena = ConfigurationManager.AppSettings["VentasConexion"];
                  return string.IsNullOrWhiteSpace(Cadena) ? "Dsn=EmbutidosS.A;Connection Timeout=5" : Cadena;
              }
+diff --git a/codigo/modulos/ventas/Biblioteca de clase Ventas Y CxC/VentasYCxC/CapaVista_Ventas/FrmMdiVentas.cs b/codigo/modulos/ventas/Biblioteca de clase Ventas Y CxC/VentasYCxC/CapaVista_Ventas/FrmMdiVentas.cs
+index 7213d32d..0471f4b0 100644
+--- a/codigo/modulos/ventas/Biblioteca de clase Ventas Y CxC/VentasYCxC/CapaVista_Ventas/FrmMdiVentas.cs	
++++ b/codigo/modulos/ventas/Biblioteca de clase Ventas Y CxC/VentasYCxC/CapaVista_Ventas/FrmMdiVentas.cs	
+@@ -18,6 +18,7 @@ namespace CapaVista_Ventas
+     {
+         private readonly int _IdUsuario;
+         private readonly ClsMenuProcesosVentas _MenuProcesos;
++        private ContextMenuStrip _MenuCatalogos;
+         private static Assembly _ModuloCierreMovimientos;
+         private static string _DirectorioCierreMovimientos;
+         private static bool _ResolverCierreRegistrado;
+@@ -106,6 +107,11 @@ namespace CapaVista_Ventas
+             InitializeComponent();
+             VentasMetAjustarIconoMantenimientos();
+             VentasMetAjustarBotonMantenimientos();
++            if (Environment.GetEnvironmentVariable("ASIS_EXAMEN_DSN") != null)
++            {
++                VentasBtnMantenimientos.Text = "Catálogos";
++                VentasTtpMenu.SetToolTip(VentasBtnMantenimientos, "Catálogos");
++            }
+             _MenuProcesos = new ClsMenuProcesosVentas(VentasTlpMenu, VentasBtnMovimientosClientes, VentasBtnRecepcionPagos, VentasBtnPedidos, VentasMetAbrirFormulario, () => _IdUsuario);
+             // El doble búfer reduce el parpadeo al redimensionar la ventana.
+             DoubleBuffered = true;
+@@ -296,8 +302,38 @@ namespace CapaVista_Ventas
+         // Abre la opción de mantenimientos del módulo.
+         private void VentasMetBtnMantenimientosClick(object Origen, EventArgs Evento)
+         {
+-            using (var Formulario = new CapaVista_Mantenimientos.FrmMantenimientosVentas())
+-                VentasMetAbrirFormulario(Formulario);
++            if (Environment.GetEnvironmentVariable("ASIS_EXAMEN_DSN") == null)
++            {
++                using (var Formulario = new CapaVista_Mantenimientos.FrmMantenimientosVentas())
++                    VentasMetAbrirFormulario(Formulario);
++                return;
++            }
++
++            if (_MenuCatalogos == null)
++            {
++                _MenuCatalogos = new ContextMenuStrip();
++                _MenuCatalogos.Items.Add("Pacientes", null, (Remitente, Argumentos) =>
++                {
++                    try
++                    {
++                        if (!CapaVista_Mantenimientos.FrmMantenimientosVentas.VentasFuncPuedeAbrirPacientes())
++                        {
++                            MessageBox.Show(this, "El usuario no tiene acceso al catálogo de pacientes.");
++                            return;
++                        }
++
++                        using (var Formulario = new CapaVista_Mantenimientos.FrmMantenimientosVentas(true))
++                            VentasMetAbrirFormulario(Formulario);
++                    }
++                    catch (Exception Excepcion)
++                    {
++                        MessageBox.Show(this, Excepcion.Message, "Catálogos", MessageBoxButtons.OK, MessageBoxIcon.Error);
++                    }
++                });
++                Disposed += (Remitente, Argumentos) => _MenuCatalogos.Dispose();
++            }
++
++            _MenuCatalogos.Show(VentasBtnMantenimientos, new Point(0, VentasBtnMantenimientos.Height));
+         }
+ 
+         // Abre la opción de cierre de movimientos.
+diff --git a/codigo/modulos/ventas/Ejecutable_Ventas/Ejecutable_Ventas/Ejecucion_Ventas.csproj b/codigo/modulos/ventas/Ejecutable_Ventas/Ejecutable_Ventas/Ejecucion_Ventas.csproj
+index 84356221..88f68f21 100644
+--- a/codigo/modulos/ventas/Ejecutable_Ventas/Ejecutable_Ventas/Ejecucion_Ventas.csproj
++++ b/codigo/modulos/ventas/Ejecutable_Ventas/Ejecutable_Ventas/Ejecucion_Ventas.csproj
+@@ -72,6 +72,10 @@
+   </ItemGroup>
+   <ItemGroup>
+     <None Include="App.config" />
++    <Content Include="..\..\..\..\..\examen-final\Pacientes.rdlc">
++      <Link>Pacientes.rdlc</Link>
++      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
++    </Content>
+     <None Include="..\..\..\..\..\recursos\modulos\ventas\iconoVentas.ico">
+       <Link>Recursos\iconoVentas.ico</Link>
+     </None>
 diff --git a/codigo/modulos/ventas/Ejecutable_Ventas/Ejecutable_Ventas/Program.cs b/codigo/modulos/ventas/Ejecutable_Ventas/Ejecutable_Ventas/Program.cs
 index 6fad3d25..58267332 100644
 --- a/codigo/modulos/ventas/Ejecutable_Ventas/Ejecutable_Ventas/Program.cs
@@ -47825,22 +48044,46 @@ index 6fad3d25..58267332 100644
                  Application.Run(Login);
 diff --git a/examen-final/01-usuario-final.sql b/examen-final/01-usuario-final.sql
 new file mode 100644
-index 00000000..dd26eb29
+index 00000000..f774457c
 --- /dev/null
 +++ b/examen-final/01-usuario-final.sql
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,71 @@
 +-- Matthew Juarez | 0901-23-4250 | 24/11/2026
 +-- Prepara el empleado ficticio y el perfil de demostracion de usuariofinal.
 +USE dbsistemaembutidos;
 +START TRANSACTION;
 +
-+INSERT INTO tblempleado
-+    (codigoEmpleado, dpiEmpleado, nitEmpleado, nombresEmpleado, apellidosEmpleado,
-+     puestoEmpleado, generoEmpleado, fechaNacimientoEmpleado, fechaContratacionEmpleado,
-+     telefonoEmpleado, correoEmpleado)
-+VALUES ('EF-0901234250', '0000901234250', 'EF09012342', 'Usuario', 'Final',
-+        'Demostracion', 'M', '1998-01-01', '2026-11-24', '00000000', 'usuariofinal@example.invalid')
-+ON DUPLICATE KEY UPDATE codigoEmpleado = codigoEmpleado;
++INSERT INTO tblmodulo (idModulo, nombreModulo, descripcionModulo, is_active)
++VALUES (7000, 'Ventas y Cuentas por Cobrar', 'Modulo de Ventas para el examen', 1)
++ON DUPLICATE KEY UPDATE idModulo = idModulo;
++
++INSERT INTO tblaplicacion (idAplicacion, idModulo, nombreAplicacion, descripcionAplicacion, is_active)
++VALUES (7001, 7000, 'Principal', 'Contenedor de Ventas', 1)
++ON DUPLICATE KEY UPDATE idAplicacion = idAplicacion;
++
++-- El proyecto de clase tiene una variante de Seguridad y otra integrada con RR. HH.
++SET @altaEmpleadoFinal = IF(
++    EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
++            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tblempleado' AND COLUMN_NAME = 'puestoEmpleado'),
++    'INSERT INTO tblempleado
++        (codigoEmpleado, dpiEmpleado, nitEmpleado, nombresEmpleado, apellidosEmpleado,
++         puestoEmpleado, generoEmpleado, fechaNacimientoEmpleado, fechaContratacionEmpleado,
++         telefonoEmpleado, correoEmpleado)
++     VALUES (''EF-0901234250'', ''0000901234250'', ''EF09012342'', ''Usuario'', ''Final'',
++             ''Demostracion'', ''M'', ''1998-01-01'', ''2026-11-24'', ''00000000'', ''usuariofinal@example.invalid'')
++     ON DUPLICATE KEY UPDATE codigoEmpleado = codigoEmpleado',
++    'INSERT INTO tblempleado
++        (codigoEmpleado, dpiEmpleado, nitEmpleado, nombresEmpleado, apellidosEmpleado,
++         idDepartamento, idJornada, salarioEmpleado, generoEmpleado, fechaNacimientoEmpleado,
++         fechaContratacionEmpleado, telefonoEmpleado, correoEmpleado)
++     SELECT ''EF-0901234250'', ''0000901234250'', ''EF09012342'', ''Usuario'', ''Final'',
++            e.idDepartamento, e.idJornada, 0, ''M'', ''1998-01-01'', ''2026-11-24'',
++            ''00000000'', ''usuariofinal@example.invalid''
++     FROM tblempleado e WHERE e.is_active = 1 ORDER BY e.idEmpleado LIMIT 1
++     ON DUPLICATE KEY UPDATE codigoEmpleado = tblempleado.codigoEmpleado');
++PREPARE altaEmpleadoFinal FROM @altaEmpleadoFinal;
++EXECUTE altaEmpleadoFinal;
++DEALLOCATE PREPARE altaEmpleadoFinal;
 +
 +INSERT INTO tblrol (nombreRol, descripcionRol, is_active)
 +VALUES ('Examen Final 0901234250', 'Acceso a bitacora y catalogo de pacientes', 1)
@@ -47868,7 +48111,6 @@ index 00000000..dd26eb29
 +FROM tblrol r CROSS JOIN tblaplicacion a
 +WHERE r.nombreRol = 'Examen Final 0901234250' AND a.idModulo = 4 AND a.idAplicacion = 12
 +ON DUPLICATE KEY UPDATE derImprimirRolModuloAplicacion = 1;
-+COMMIT;
 +-- Requiere el catalogo de aplicaciones de Ventas antes de otorgar acceso al MDI.
 +INSERT INTO tblrolmoduloaplicacion
 +    (idRol, idModulo, idAplicacion, derImprimirRolModuloAplicacion)
@@ -47876,6 +48118,69 @@ index 00000000..dd26eb29
 +FROM tblrol r CROSS JOIN tblaplicacion a
 +WHERE r.nombreRol = 'Examen Final 0901234250' AND a.idModulo = 7000 AND a.idAplicacion = 7001
 +ON DUPLICATE KEY UPDATE derImprimirRolModuloAplicacion = 1;
++COMMIT;
+diff --git a/examen-final/02-pacientes.sql b/examen-final/02-pacientes.sql
+new file mode 100644
+index 00000000..29c586f7
+--- /dev/null
++++ b/examen-final/02-pacientes.sql
+@@ -0,0 +1,56 @@
++-- Matthew Juarez | 0901-23-4250 | 24/11/2026 | LDD y permisos del catalogo.
++USE dbsistemaembutidos;
++
++CREATE TABLE IF NOT EXISTS tbl_paciente (
++    pk_idPaciente INT NOT NULL,
++    nombrePaciente VARCHAR(50),
++    apellidoPaciente VARCHAR(50),
++    fechaNacimientoPaciente DATE,
++    sexoPaciente VARCHAR(15),
++    direccionPaciente VARCHAR(30),
++    telefonoPaciente VARCHAR(20),
++    estadoPaciente INT,
++    PRIMARY KEY (pk_idPaciente)
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
++
++CREATE TABLE IF NOT EXISTS tblReporte (
++    numeroReporte INT NOT NULL PRIMARY KEY,
++    nombreReporte VARCHAR(150) NOT NULL UNIQUE,
++    rutaReporte VARCHAR(500) NOT NULL,
++    fechaReporte DATE NOT NULL,
++    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
++) ENGINE=InnoDB;
++
++CREATE TABLE IF NOT EXISTS tblAplicacionReporte (
++    idAplicacion INT NOT NULL,
++    numeroReporte INT NOT NULL,
++    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
++    PRIMARY KEY (idAplicacion, numeroReporte),
++    FOREIGN KEY (idAplicacion) REFERENCES tblaplicacion (idAplicacion),
++    FOREIGN KEY (numeroReporte) REFERENCES tblReporte (numeroReporte)
++) ENGINE=InnoDB;
++
++START TRANSACTION;
++INSERT INTO tblaplicacion (idAplicacion, idModulo, nombreAplicacion, descripcionAplicacion, is_active)
++VALUES (7017, 7000, 'Catálogo de pacientes', 'Mantenimiento y reporte de pacientes', 1)
++ON DUPLICATE KEY UPDATE is_active = 1;
++
++INSERT INTO tblrolmoduloaplicacion
++    (idRol, idModulo, idAplicacion, derInsertarRolModuloAplicacion,
++     derEditarRolModuloAplicacion, derEliminarRolModuloAplicacion, derImprimirRolModuloAplicacion)
++SELECT idRol, 7000, 7017, 1, 1, 1, 1
++FROM tblrol
++WHERE nombreRol = 'Examen Final 0901234250'
++ON DUPLICATE KEY UPDATE derInsertarRolModuloAplicacion = 1, derEditarRolModuloAplicacion = 1,
++    derEliminarRolModuloAplicacion = 1, derImprimirRolModuloAplicacion = 1;
++
++INSERT INTO tblReporte (numeroReporte, nombreReporte, rutaReporte, fechaReporte)
++VALUES (7017, 'Catálogo de pacientes', 'Pacientes.rdlc', '2026-11-24')
++ON DUPLICATE KEY UPDATE rutaReporte = VALUES(rutaReporte);
++
++INSERT INTO tblAplicacionReporte (idAplicacion, numeroReporte)
++VALUES (7017, 7017)
++ON DUPLICATE KEY UPDATE numeroReporte = VALUES(numeroReporte);
++COMMIT;
 diff --git a/examen-final/Compilar.ps1 b/examen-final/Compilar.ps1
 new file mode 100644
 index 00000000..0a26d294
@@ -47892,3 +48197,143 @@ index 00000000..0a26d294
 +$solucion = Join-Path $PSScriptRoot '../codigo/modulos/ventas/Ejecutable_Ventas/Ejecucion_Ventas.sln'
 +& $msbuild $solucion -restore -m -p:RestorePackagesConfig=true "-p:Configuration=$Configuracion" -verbosity:minimal
 +if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+diff --git a/examen-final/InstalarBase.ps1 b/examen-final/InstalarBase.ps1
+new file mode 100644
+index 00000000..d3ed547b
+--- /dev/null
++++ b/examen-final/InstalarBase.ps1
+@@ -0,0 +1,44 @@
++﻿# Matthew Juarez | 0901-23-4250 | 24/11/2026 | Instala el catalogo y los permisos por ODBC.
++param(
++    [Security.SecureString]$Clave,
++    [ValidateSet('Debug', 'Release')][string]$Configuracion = 'Release'
++)
++$ErrorActionPreference = 'Stop'
++$conexion = [System.Data.Odbc.OdbcConnection]::new('Dsn=asis22k26')
++try {
++    $conexion.Open()
++    $comando = $conexion.CreateCommand()
++    $comando.CommandText = 'SELECT DATABASE()'
++    if ($comando.ExecuteScalar() -ne 'dbsistemaembutidos') {
++        throw 'El DSN asis22k26 debe apuntar a dbsistemaembutidos.'
++    }
++
++    if ($Clave) {
++        $bin = Join-Path $PSScriptRoot "../codigo/modulos/ventas/Ejecutable_Ventas/Ejecutable_Ventas/bin/$Configuracion"
++        Add-Type -Path (Join-Path $bin 'BCrypt-Net-Next.dll')
++        $credencial = [PSCredential]::new('usuariofinal', $Clave)
++        $comando.CommandText = 'SET @hash_usuariofinal = ?'
++        $null = $comando.Parameters.Add('hash', [System.Data.Odbc.OdbcType]::VarChar, 60)
++        $comando.Parameters[0].Value = [BCrypt.Net.BCrypt]::HashPassword($credencial.GetNetworkCredential().Password)
++        $null = $comando.ExecuteNonQuery()
++        $comando.Parameters.Clear()
++    }
++
++    foreach ($archivo in '01-usuario-final.sql', '02-pacientes.sql') {
++        $sql = Get-Content (Join-Path $PSScriptRoot $archivo) -Raw -Encoding UTF8
++        $sql = $sql -replace '(?m)^\s*--[^\r\n]*', ''
++        foreach ($sentencia in ($sql -split ';')) {
++            if ($sentencia.Trim()) {
++                $comando.CommandText = $sentencia.Trim()
++                $null = $comando.ExecuteNonQuery()
++            }
++        }
++    }
++    $comando.CommandText = "SELECT COUNT(*) FROM tblusuario WHERE nombreUsuario='usuariofinal'"
++    if ($comando.ExecuteScalar() -ne 1) {
++        Write-Warning 'Cree usuariofinal desde Seguridad o ejecute de nuevo con -Clave.'
++    }
++    Write-Output 'Catálogo y permisos instalados a través del DSN asis22k26.'
++} finally {
++    $conexion.Dispose()
++}
+diff --git a/examen-final/Pacientes.rdlc b/examen-final/Pacientes.rdlc
+new file mode 100644
+index 00000000..8888220c
+--- /dev/null
++++ b/examen-final/Pacientes.rdlc
+@@ -0,0 +1,58 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Matthew Juárez | 0901-23-4250 | 24/11/2026 | Reporte del catálogo de pacientes -->
++<Report xmlns="http://schemas.microsoft.com/sqlserver/reporting/2008/01/reportdefinition">
++  <Body>
++    <ReportItems>
++      <Textbox Name="Titulo">
++        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Catálogo de pacientes</Value><Style><FontSize>16pt</FontSize><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs>
++        <Height>0.9cm</Height><Width>16.3cm</Width>
++      </Textbox>
++      <Tablix Name="TablaPacientes">
++        <TablixBody>
++          <TablixColumns><TablixColumn><Width>1cm</Width></TablixColumn>
++<TablixColumn><Width>2.3cm</Width></TablixColumn>
++<TablixColumn><Width>2.3cm</Width></TablixColumn>
++<TablixColumn><Width>2.2cm</Width></TablixColumn>
++<TablixColumn><Width>1.5cm</Width></TablixColumn>
++<TablixColumn><Width>3.3cm</Width></TablixColumn>
++<TablixColumn><Width>2.2cm</Width></TablixColumn>
++<TablixColumn><Width>1.5cm</Width></TablixColumn></TablixColumns>
++          <TablixRows><TablixRow><Height>0.7cm</Height><TablixCells>
++<TablixCell><CellContents><Textbox Name="H0"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>ID</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++<TablixCell><CellContents><Textbox Name="H1"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>Nombre</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++<TablixCell><CellContents><Textbox Name="H2"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>Apellido</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++<TablixCell><CellContents><Textbox Name="H3"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>Nacimiento</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++<TablixCell><CellContents><Textbox Name="H4"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>Sexo</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++<TablixCell><CellContents><Textbox Name="H5"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>Dirección</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++<TablixCell><CellContents><Textbox Name="H6"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>Teléfono</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++<TablixCell><CellContents><Textbox Name="H7"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>Estado</Value><Style><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++</TablixCells></TablixRow><TablixRow><Height>0.7cm</Height><TablixCells>
++<TablixCell><CellContents><Textbox Name="D0"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!pk_idPaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++<TablixCell><CellContents><Textbox Name="D1"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!nombrePaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++<TablixCell><CellContents><Textbox Name="D2"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!apellidoPaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++<TablixCell><CellContents><Textbox Name="D3"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!fechaNacimientoPaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++<TablixCell><CellContents><Textbox Name="D4"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!sexoPaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++<TablixCell><CellContents><Textbox Name="D5"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!direccionPaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++<TablixCell><CellContents><Textbox Name="D6"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!telefonoPaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++<TablixCell><CellContents><Textbox Name="D7"><CanGrow>true</CanGrow><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!estadoPaciente.Value</Value><Style></Style></TextRun></TextRuns></Paragraph></Paragraphs><Style><PaddingLeft>3pt</PaddingLeft><PaddingRight>3pt</PaddingRight></Style></Textbox></CellContents></TablixCell>
++</TablixCells></TablixRow></TablixRows>
++        </TablixBody>
++        <TablixColumnHierarchy><TablixMembers><TablixMember /><TablixMember /><TablixMember /><TablixMember /><TablixMember /><TablixMember /><TablixMember /><TablixMember /></TablixMembers></TablixColumnHierarchy>
++        <TablixRowHierarchy><TablixMembers><TablixMember><KeepWithGroup>After</KeepWithGroup><RepeatOnNewPage>true</RepeatOnNewPage></TablixMember><TablixMember><Group Name="Detalle" /></TablixMember></TablixMembers></TablixRowHierarchy>
++        <DataSetName>Pacientes</DataSetName><Top>1cm</Top><Height>1.4cm</Height><Width>16.3cm</Width>
++      </Tablix>
++    </ReportItems>
++    <Height>2.4cm</Height>
++  </Body>
++  <Width>16.3cm</Width>
++  <Page><PageHeight>27.94cm</PageHeight><PageWidth>21.59cm</PageWidth><LeftMargin>1.5cm</LeftMargin><RightMargin>1.5cm</RightMargin><TopMargin>1.5cm</TopMargin><BottomMargin>1.5cm</BottomMargin></Page>
++  <DataSources><DataSource Name="DatosLocales"><ConnectionProperties><DataProvider>System.Data.DataSet</DataProvider><ConnectString>/* Local */</ConnectString></ConnectionProperties></DataSource></DataSources>
++  <DataSets><DataSet Name="Pacientes"><Query><DataSourceName>DatosLocales</DataSourceName><CommandText>/* Local */</CommandText></Query><Fields><Field Name="pk_idPaciente"><DataField>pk_idPaciente</DataField></Field>
++<Field Name="nombrePaciente"><DataField>nombrePaciente</DataField></Field>
++<Field Name="apellidoPaciente"><DataField>apellidoPaciente</DataField></Field>
++<Field Name="fechaNacimientoPaciente"><DataField>fechaNacimientoPaciente</DataField></Field>
++<Field Name="sexoPaciente"><DataField>sexoPaciente</DataField></Field>
++<Field Name="direccionPaciente"><DataField>direccionPaciente</DataField></Field>
++<Field Name="telefonoPaciente"><DataField>telefonoPaciente</DataField></Field>
++<Field Name="estadoPaciente"><DataField>estadoPaciente</DataField></Field></Fields></DataSet></DataSets>
++</Report>
+diff --git a/examen-final/README.md b/examen-final/README.md
+new file mode 100644
+index 00000000..d14c7385
+--- /dev/null
++++ b/examen-final/README.md
+@@ -0,0 +1,20 @@
++# Examen final · Análisis de Sistemas II
++
++Matthew Juárez · Carné 0901-23-4250 · 24/11/2026
++
++El ejecutable de Ventas abre el login de Seguridad. La sesión identifica a `usuariofinal` en los contenedores de Seguridad y Ventas. El catálogo de pacientes utiliza el Navegador (MVC), Consultas Inteligentes, el Reporteador y la bitácora transaccional del proyecto.
++
++## Compilación e instalación
++
++1. Configure y pruebe el DSN de usuario ODBC de 64 bits `asis22k26` con MySQL y la base `dbsistemaembutidos`. Si prepara una base limpia, instale primero el esquema de Seguridad de clase desde `scripts/componentes/seguridad/dbSistemaEmbutidos_v1.8.sql`.
++2. Desde la raíz del repositorio, ejecute `powershell -File examen-final/Compilar.ps1 -Configuracion Release`. Puede abrir la solución `codigo/modulos/ventas/Ejecutable_Ventas/Ejecucion_Ventas.sln` en Visual Studio.
++3. Ejecute `powershell -Command "& ./examen-final/InstalarBase.ps1 -Clave (Read-Host 'Clave para usuariofinal' -AsSecureString)"`. El script registra el usuario, los permisos y el catálogo en la base del DSN. Si la cuenta existe, conserva su contraseña. En la variante integrada de RR. HH. se requiere una ficha de empleado activa para usar su departamento y jornada.
++4. Abra `codigo/modulos/ventas/Ejecutable_Ventas/Ejecutable_Ventas/bin/Release/Ejecucion_Ventas.exe`. Inicie sesión como `usuariofinal` en **Ventas** y seleccione **Catálogos → Pacientes**.
++
++## Secuencia de demostración
++
++Con datos ficticios, ingrese a Ana Demo, Luis Demo y Sara Demo. Use estado 1 para los tres. Cambie el teléfono de Luis, elimine a Sara y abra **Imprimir** para mostrar a Ana y Luis en el reporte. Pulse **Ayuda** para mostrar el flujo del catálogo.
++
++Vuelva al login e ingrese a **Seguridad → Bitácora** con `usuariofinal`. Filtre por la tabla `tbl_paciente` y sus IDs. Deben verse tres INSERT, un UPDATE y un DELETE. Quite el filtro de tabla para mostrar también los LOGIN.
++
++En el gestor de MySQL ejecute `SELECT * FROM tbl_paciente ORDER BY pk_idPaciente;` para verificar los registros finales. Muestre también el DSN y el resultado de su botón **Test**. Para el video, mantenga visibles la cámara, el nombre, el carné y la fecha y hora del sistema. Muestre el código en Visual Studio y el resultado del script de compilación. Suba el archivo de video a Drive y entregue en Canvas el enlace al video y el enlace al fork.
